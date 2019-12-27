@@ -1,0 +1,15 @@
+{
+    "TableName": "MetricsSnapshoptsTable",
+    "KeySchema": [
+      { "AttributeName": "Id", "KeyType": "HASH" },
+      { "AttributeName": "CreatedAt", "KeyType": "RANGE" }
+    ],
+    "AttributeDefinitions": [
+      { "AttributeName": "Id", "AttributeType": "S" },
+      { "AttributeName": "CreatedAt", "AttributeType": "S" }
+    ],
+    "ProvisionedThroughput": {
+      "ReadCapacityUnits": 1,
+      "WriteCapacityUnits": 1
+    }
+}

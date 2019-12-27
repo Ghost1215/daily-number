@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Sample SAM Template for metrics_mailer
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+Parameters:
+  Version:
+    Type: String
+    Default: v1
+
+Resources:
+
+  MetricSnapshotsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: MetricsSnapshoptsTable
+
+  GetAllMetricsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Lambda to CRUD metrics
+      Runtime: ruby2.5
+      Handler: app.lambda_handler
+      CodeUri: metrics/get_all
+      # Layers:
+      #   - !Ref BundledGems
+      Events:
+        GetAllMetrics:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /metrics
+            # RestApiId: !Ref DailyNumbersApi
+            Method: GET
+            
+    # BundledGems:
+    #   Type: AWS::Serverless::LayerVersion
+    #   Properties:
+    #     LayerName: metrics-mailer-bundle
+    #     Description: Bundled gems for metrics mailer
+    #     ContentUri: dependencies/
+    #     CompatibleRuntimes:
+    #       - ruby2.5
+    #     LicenseInfo: MIT
+    #     RetentionPolicy: Retain
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  HelloWorldApi:
+    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  HelloWorldFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt HelloWorldFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt HelloWorldFunctionRole.Arn
