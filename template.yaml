@@ -6,6 +6,7 @@ Description: Sample SAM Template for metrics_mailer
 Globals:
   Function:
     Timeout: 3
+    Runtime: ruby2.5
 Parameters:
   Version:
     Type: String
@@ -23,22 +24,26 @@ Resources:
     Properties:
       Description: Lambda to CRUD metrics
       Runtime: ruby2.5
+      Timeout: 10
       Handler: app.lambda_handler
+      # Policies:
+      #   - DynamoDBCrudPolicy
       CodeUri: metrics/get_all
-      # Layers:
-      #   - !Ref BundledGems
+      Layers:
+        - arn:aws:lambda:us-west-2:402153944964:layer:metrics-bundle-layer:1
       Events:
         GetAllMetrics:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: Api
           Properties:
             Path: /metrics
-            # RestApiId: !Ref DailyNumbersApi
             Method: GET
             
-    # BundledGems:
-    #   Type: AWS::Serverless::LayerVersion
+    # Couldn't get this working, just uploaded layer to console
+    # MetricsBundleLayer:
+    #   # Type: AWS::Serverless::LayerVersion
+    #   Type: AWS::Lambda::LayerVersion
     #   Properties:
-    #     LayerName: metrics-mailer-bundle
+    #     LayerName: metrics-bundle-layer
     #     Description: Bundled gems for metrics mailer
     #     ContentUri: dependencies/
     #     CompatibleRuntimes:
@@ -50,7 +55,7 @@ Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
+  MetricsApi:
     Description: "API Gateway endpoint URL for Prod stage for Hello World function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
   HelloWorldFunction:
