@@ -1,17 +1,65 @@
 ### Notes
 
+// building the layer, in layer directory:
+mkdir ruby && mkdir ruby/gems
+docker run --rm -v $PWD:/var/layer -w /var/layer \
+    lambci/lambda:build-ruby2.5 \
+    bundle install --path=ruby/gems
+    
+// follow the rest of the steps here, and note you need to move directory to get /ruby/gems/2.5.0/...
+https://medium.com/@joshua.a.kahn/exploring-aws-lambda-layers-and-ruby-support-5510f81b4d14
+
+
+
+#### dyanmodb
+// run in a container:
+docker run -p 8000:8000 amazon/dynamodb-local
+
+possilby useful repo showing how to connect to dynamodb local running in a container:
+https://github.com/aws-samples/aws-sam-java-rest/blob/master/src/test/resources/test_environment_mac.json
+
+##### gotchas
+
+- Bundle gems in a layer. Follow procedure in blog post below, which should be better documented:
+https://medium.com/@joshua.a.kahn/exploring-aws-lambda-layers-and-ruby-support-5510f81b4d14
+
+- Change the Lambda timeout, the default 3s is too few
+
+- Does your Lambda need the ddb full access policy defined in template.yml?
+
+
+#### sam commands:
+
+// Build the Lambda and associated assets. Use --use-container if there are platform-specific build steps, like compiling native code a la nokogiri
+// will --use-container still be necessary with a layer?
+`sam build --use-container`
+
+// invoke a Lambda locally:
+`sam local invoke GetAllMetricsFunction`
+
+// deploy
+`sam deploy`
+
+
+
 https://github.com/ganshan/sam-dynamodb-local
 
-aws dynamodb list-tables --endpoint-url http://localhost:8000
 
-aws dynamodb describe-table --table-name MetricsSnapshoptsTable --endpoint-url http://localhost:8000
+#### dynamodb local CLI commands
 
+aws dynamodb list-tables --endpoint-url http://docker.for.mac.localhost:8000/
 
-At the command prompt, create the table by executing:
+// At the command prompt, create the table by executing:
 aws dynamodb create-table --cli-input-json file://create-metrics-snapshots-table.json --endpoint-url http://localhost:8000
+   
+aws dynamodb describe-table --table-name MetricsSnapshotsTable --endpoint-url http://localhost:8000
 
-Note: If you misconfigured your table and need to delete it, you may do so by executing the following command:
-aws dynamodb delete-table --table-name MetricsSnapshoptsTable --endpoint-url http://localhost:8000
+aws dynamodb put-item --table-name MetricsSnapshotsTable --item '{ "Id": {"S": "2"}, "CreatedAt": {"S": "2019-12-27"}, "metric": {"S": "WTI Crude"}, "value": {"S": "foo"} }' --endpoint-url http://localhost:8000
+
+aws dynamodb scan --table-name MetricsSnapshotsTable --endpoint-url http://localhost:8000
+
+// Note: If you misconfigured your table and need to delete it, you may do so by executing the following command:
+aws dynamodb delete-table --table-name MetricsSnapshotsTable --endpoint-url http://localhost:8000
 
 # metrics_mailer
 
