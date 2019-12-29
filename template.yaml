@@ -17,26 +17,49 @@ Resources:
   MetricSnapshotsTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
-      TableName: MetricsSnapshoptsTable
+      TableName: MetricsSnapshotsTable
 
-  GetAllMetricsFunction:
+  GetMetricsFunction:
     Type: AWS::Serverless::Function
     Properties:
       Description: Lambda to CRUD metrics
       Runtime: ruby2.5
       Timeout: 10
       Handler: app.lambda_handler
-      # Policies:
-      #   - DynamoDBCrudPolicy
+      Policies:
+      - AmazonDynamoDBFullAccess
+      - AWSLambdaFullAccess
       CodeUri: metrics/get_all
       Layers:
         - arn:aws:lambda:us-west-2:402153944964:layer:metrics-bundle-layer:1
       Events:
-        GetAllMetrics:
+        GetMetrics:
           Type: Api
           Properties:
             Path: /metrics
             Method: GET
+            
+  SendEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Lambda to send metrics email
+      Runtime: ruby2.5
+      Timeout: 10
+      Handler: app.lambda_handler
+      Policies:
+      - AmazonSESFullAccess
+      CodeUri: metrics/send_email
+      # Layers:
+      #   - arn:aws:lambda:us-west-2:402153944964:layer:metrics-bundle-layer:1
+      Events:
+        GetMetrics:
+          Type: Api
+          Properties:
+            Path: /email
+            Method: GET
+  
+  EmailSqsQueue:
+      Type: AWS::SQS::Queue
             
     # Couldn't get this working, just uploaded layer to console
     # MetricsBundleLayer:
@@ -56,11 +79,11 @@ Outputs:
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   MetricsApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+    Description: "API Gateway endpoint URL for Prod stage for GetMetricsFunction"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/metrics"
+  # HelloWorldFunction:
+  #   Description: "Hello World Lambda Function ARN"
+  #   Value: !GetAtt HelloWorldFunction.Arn
+  # HelloWorldFunctionIamRole:
+  #   Description: "Implicit IAM Role created for Hello World function"
+  #   Value: !GetAtt HelloWorldFunctionRole.Arn
