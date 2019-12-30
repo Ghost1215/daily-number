@@ -38,7 +38,11 @@ Resources:
           Properties:
             Path: /metrics
             Method: GET
-            
+        ScheduledGetMetrics:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 day)
+
   SendEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -47,6 +51,7 @@ Resources:
       Timeout: 10
       Handler: app.lambda_handler
       Policies:
+      - AmazonDynamoDBFullAccess
       - AmazonSESFullAccess
       CodeUri: metrics/send_email
       # Layers:
@@ -57,10 +62,10 @@ Resources:
           Properties:
             Path: /email
             Method: GET
-  
-  EmailSqsQueue:
-      Type: AWS::SQS::Queue
-            
+
+  # EmailSqsQueue:
+  #     Type: AWS::SQS::Queue
+
     # Couldn't get this working, just uploaded layer to console
     # MetricsBundleLayer:
     #   # Type: AWS::Serverless::LayerVersion

@@ -1,12 +1,12 @@
 {
     "TableName": "MetricsSnapshotsTable",
     "KeySchema": [
-      { "AttributeName": "Id", "KeyType": "HASH" },
-      { "AttributeName": "CreatedAt", "KeyType": "RANGE" }
+      { "AttributeName": "id", "KeyType": "HASH" },
+      { "AttributeName": "createdAt", "KeyType": "RANGE" }
     ],
     "AttributeDefinitions": [
-      { "AttributeName": "Id", "AttributeType": "S" },
-      { "AttributeName": "CreatedAt", "AttributeType": "S" }
+      { "AttributeName": "id", "AttributeType": "S" },
+      { "AttributeName": "createdAt", "AttributeType": "S" }
     ],
     "ProvisionedThroughput": {
       "ReadCapacityUnits": 1,
