@@ -1,170 +1,94 @@
-### Notes
-
-// building the layer, in layer directory:
-mkdir ruby && mkdir ruby/gems
-docker run --rm -v $PWD:/var/layer -w /var/layer \
-    lambci/lambda:build-ruby2.5 \
-    bundle install --path=ruby/gems
-    
-// follow the rest of the steps here, and note you need to move directory to get /ruby/gems/2.5.0/...
-https://medium.com/@joshua.a.kahn/exploring-aws-lambda-layers-and-ruby-support-5510f81b4d14
+# Daily Numbers
 
 
+Daily Numbers is an app to send an email every morning with numbers you want to see. Right now it's rock simple--it will mail one person (me! but fork and edit if you want it to be you) an email with stats related to energy and renewables:
 
-#### dyanmodb
-// run in a container:
-docker run -p 8000:8000 amazon/dynamodb-local
+- Current oil prices (WTI, Brent)
+- Natural gas price (Henry Hub I presume). Gas and oil prices are scraped from Oilprice.com
+- Daily atmospheric carbon measurements from the Mauna Loa Observatory. See the [Keeling Curve](https://en.wikipedia.org/wiki/Keeling_Curve) in action!
 
-possilby useful repo showing how to connect to dynamodb local running in a container:
-https://github.com/aws-samples/aws-sam-java-rest/blob/master/src/test/resources/test_environment_mac.json
+TODO:
 
-##### gotchas
+- More energy stats: Lithium, gas & diesel, electricity rates, energy and renewable stocks (TSLA, FSLR, PEGI, AY).
+- Other rando stats: other stocks, sports scores, weather. Countdowns to events you specify?
+- Chart historical data
+- Recent news from BNEF, GTM, UtilityDive, etc
+- Cognito integration--let other people sign up for it
+- Break into multiple Lambdas for different sources
 
-- Bundle gems in a layer. Follow procedure in blog post below, which should be better documented:
-https://medium.com/@joshua.a.kahn/exploring-aws-lambda-layers-and-ruby-support-5510f81b4d14
+It's implemented as a scheduled AWS Lambda, in Ruby, which scrapes the data and then fires another Lambda to send the email via SES. It sticks the data into DynamoDB for eventual graphing.
 
-- Change the Lambda timeout, the default 3s is too few
-
-- Does your Lambda need the ddb full access policy defined in template.yml?
+## Notes
 
 
 #### sam commands:
 
-// Build the Lambda and associated assets. Use --use-container if there are platform-specific build steps, like compiling native code a la nokogiri
-// will --use-container still be necessary with a layer?
+Build the Lambda and associated assets. Use --use-container if there are platform-specific build steps, like compiling native code a la nokogiri. Though if you have dependencies that take a long time to compile, you'll save a lot of time by putting them in a layer.
 `sam build --use-container`
 
-// invoke a Lambda locally:
+Invoke a Lambda locally:
+
 `sam local invoke GetAllMetricsFunction`
 
-// deploy
+Guided deployment:
+
+`sam deploy --guided --capabilities CAPABILITY_NAMED_IAM`
+
+Subsequent deploy using saved values (re-run with --guided if you need to update them)
+
 `sam deploy`
-sam deploy --guided --capabilities CAPABILITY_NAMED_IAM
+
+#### Create a layer for gems
+
+Deployment is interminable if Nokogiri has to be built every time. Put that (and the rest of the gems) in a Lambda layer and it's muuch faster.
+
+Building the layer, in layer directory:
+
+`mkdir ruby && mkdir ruby/gems
+docker run --rm -v $PWD:/var/layer -w /var/layer \
+    lambci/lambda:build-ruby2.5 \
+    bundle install --path=ruby/gems`
+
+Follow the rest of the steps [here](https://medium.com/@joshua.a.kahn/exploring-aws-lambda-layers-and-ruby-support-5510f81b4d14), and note you need to move directory to get /ruby/gems/2.5.0/...
 
 
+#### DynamoDB local
 
-https://github.com/ganshan/sam-dynamodb-local
+Run in a container:
 
+`docker run -p 8000:8000 amazon/dynamodb-local`
 
-#### dynamodb local CLI commands
-
-aws dynamodb list-tables --endpoint-url http://docker.for.mac.localhost:8000/
-
-// At the command prompt, create the table by executing:
-aws dynamodb create-table --cli-input-json file://create-metrics-snapshots-table.json --endpoint-url http://localhost:8000
-   
-aws dynamodb describe-table --table-name MetricsSnapshotsTable --endpoint-url http://localhost:8000
-
-aws dynamodb put-item --table-name MetricsSnapshotsTable --item '{ "Id": {"S": "2"}, "CreatedAt": {"S": "2019-12-27"}, "metric": {"S": "WTI Crude"}, "value": {"S": "foo"} }' --endpoint-url http://localhost:8000
-
-aws dynamodb scan --table-name MetricsSnapshotsTable --endpoint-url http://localhost:8000
-
-// Note: If you misconfigured your table and need to delete it, you may do so by executing the following command:
-aws dynamodb delete-table --table-name MetricsSnapshotsTable --endpoint-url http://localhost:8000
+possilby useful repo showing how to connect to dynamodb local running in a container:
+https://github.com/aws-samples/aws-sam-java-rest/blob/master/src/test/resources/test_environment_mac.json
 
 
+##### gotchas
 
-If you prefer to use an integrated development environment (IDE) to build and test your application, you can use the AWS Toolkit.  
-The AWS Toolkit is an open source plug-in for popular IDEs that uses the SAM CLI to build and deploy serverless applications on AWS. The AWS Toolkit also adds a simplified step-through debugging experience for Lambda function code. See the following links to get started.
+- Change the Lambda timeout, the default 3s is too too low if external APIs are being hit.
 
-* [VS Code](https://docs.aws.amazon.com/toolkit-for-vscode/latest/userguide/welcome.html)
+- Make sure to give Lambdas the access they need with the 'Policies' section in template.yml
 
-## Deploy the sample application
 
-The Serverless Application Model Command Line Interface (SAM CLI) is an extension of the AWS CLI that adds functionality for building and testing Lambda applications. It uses Docker to run your functions in an Amazon Linux environment that matches Lambda. It can also emulate your application's build environment and API.
+#### DynamoDB local CLI commands
 
-To use the SAM CLI, you need the following tools.
+[Useful blog post](https://github.com/ganshan/sam-dynamodb-local)
 
-* SAM CLI - [Install the SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
-* Ruby - [Install Ruby 2.5](https://www.ruby-lang.org/en/documentation/installation/)
-* Docker - [Install Docker community edition](https://hub.docker.com/search/?type=edition&offering=community)
+`aws dynamodb list-tables --endpoint-url http://docker.for.mac.localhost:8000/`
 
-To build and deploy your application for the first time, run the following in your shell:
+`aws dynamodb create-table --cli-input-json file://create-metrics-snapshots-table.json --endpoint-url http://localhost:8000`
 
-```bash
-sam build
-sam deploy --guided
-```
+`aws dynamodb describe-table --table-name MetricsSnapshotsTable --endpoint-url http://localhost:8000`
 
-The first command will build the source of your application. The second command will package and deploy your application to AWS, with a series of prompts:
+`aws dynamodb put-item --table-name MetricsSnapshotsTable --item '{ "Id": {"S": "2"}, "CreatedAt": {"S": "2019-12-27"}, "metric": {"S": "WTI Crude"}, "value": {"S": "foo"} }' --endpoint-url http://localhost:8000`
 
-* **Stack Name**: The name of the stack to deploy to CloudFormation. This should be unique to your account and region, and a good starting point would be something matching your project name.
-* **AWS Region**: The AWS region you want to deploy your app to.
-* **Confirm changes before deploy**: If set to yes, any change sets will be shown to you before execution for manual review. If set to no, the AWS SAM CLI will automatically deploy application changes.
-* **Allow SAM CLI IAM role creation**: Many AWS SAM templates, including this example, create AWS IAM roles required for the AWS Lambda function(s) included to access AWS services. By default, these are scoped down to minimum required permissions. To deploy an AWS CloudFormation stack which creates or modified IAM roles, the `CAPABILITY_IAM` value for `capabilities` must be provided. If permission isn't provided through this prompt, to deploy this example you must explicitly pass `--capabilities CAPABILITY_IAM` to the `sam deploy` command.
-* **Save arguments to samconfig.toml**: If set to yes, your choices will be saved to a configuration file inside the project, so that in the future you can just re-run `sam deploy` without parameters to deploy changes to your application.
+`aws dynamodb scan --table-name MetricsSnapshotsTable --endpoint-url http://localhost:8000`
 
-You can find your API Gateway Endpoint URL in the output values displayed after deployment.
+`aws dynamodb delete-table --table-name MetricsSnapshotsTable --endpoint-url http://localhost:8000`
 
-## Use the SAM CLI to build and test locally
 
-Build your application with the `sam build` command.
+### Issues with docs:
 
-```bash
-metrics_mailer$ sam build
-```
+- In DynamoDB put\_item docs, it does not behave as expected:
+https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/DynamoDB/Client.html#put_item-instance_method
 
-The SAM CLI installs dependencies defined in `hello_world/Gemfile`, creates a deployment package, and saves it in the `.aws-sam/build` folder.
-
-Test a single function by invoking it directly with a test event. An event is a JSON document that represents the input that the function receives from the event source. Test events are included in the `events` folder in this project.
-
-Run functions locally and invoke them with the `sam local invoke` command.
-
-```bash
-metrics_mailer$ sam local invoke HelloWorldFunction --event events/event.json
-```
-
-The SAM CLI can also emulate your application's API. Use the `sam local start-api` to run the API locally on port 3000.
-
-```bash
-metrics_mailer$ sam local start-api
-metrics_mailer$ curl http://localhost:3000/
-```
-
-The SAM CLI reads the application template to determine the API's routes and the functions that they invoke. The `Events` property on each function's definition includes the route and method for each path.
-
-```yaml
-      Events:
-        HelloWorld:
-          Type: Api
-          Properties:
-            Path: /hello
-            Method: get
-```
-
-## Add a resource to your application
-The application template uses AWS Serverless Application Model (AWS SAM) to define application resources. AWS SAM is an extension of AWS CloudFormation with a simpler syntax for configuring common serverless application resources such as functions, triggers, and APIs. For resources not included in [the SAM specification](https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md), you can use standard [AWS CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html) resource types.
-
-## Fetch, tail, and filter Lambda function logs
-
-To simplify troubleshooting, SAM CLI has a command called `sam logs`. `sam logs` lets you fetch logs generated by your deployed Lambda function from the command line. In addition to printing the logs on the terminal, this command has several nifty features to help you quickly find the bug.
-
-`NOTE`: This command works for all AWS Lambda functions; not just the ones you deploy using SAM.
-
-```bash
-metrics_mailer$ sam logs -n HelloWorldFunction --stack-name metrics_mailer --tail
-```
-
-You can find more information and examples about filtering Lambda function logs in the [SAM CLI Documentation](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-logging.html).
-
-## Unit tests
-
-Tests are defined in the `tests` folder in this project.
-
-```bash
-metrics_mailer$ ruby tests/unit/test_handler.rb
-```
-
-## Cleanup
-
-To delete the sample application that you created, use the AWS CLI. Assuming you used your project name for the stack name, you can run the following:
-
-```bash
-aws cloudformation delete-stack --stack-name metrics_mailer
-```
-
-## Resources
-
-See the [AWS SAM developer guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html) for an introduction to SAM specification, the SAM CLI, and serverless application concepts.
-
-Next, you can use AWS Serverless Application Repository to deploy ready to use Apps that go beyond hello world samples and learn how authors developed their applications: [AWS Serverless Application Repository main page](https://aws.amazon.com/serverless/serverlessrepo/)
+- Building Layers for Ruby gems isn't really documented at all. Info in [this blog post](https://medium.com/@joshua.a.kahn/exploring-aws-lambda-layers-and-ruby-support-5510f81b4d14) should be added to AWS docs:
