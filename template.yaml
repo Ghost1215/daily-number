@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Sample SAM Template for metrics_mailer
+Description: SAM Template for daily-numbers
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -14,6 +14,43 @@ Parameters:
 
 Resources:
 
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      UserPoolName: DailyNumbers
+      UsernameAttributes:
+      - email
+      AutoVerifiedAttributes:
+      - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 6
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+
+  UserPoolTokenClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      CallbackURLs:
+      - https://www.fryolator.com/
+      GenerateSecret: false
+      ExplicitAuthFlows:
+      - USER_PASSWORD_AUTH
+  # How to generate a Cognito User Pool
+
+  UserPoolUser:
+    Type: AWS::Cognito::UserPoolUser
+    Properties:
+      DesiredDeliveryMediums:
+        - EMAIL
+      Username: john@fnnny.com
+      UserPoolId: !Ref UserPool
+
   MetricSnapshotsTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
@@ -22,21 +59,21 @@ Resources:
   GetMetricsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Lambda to CRUD metrics
+      Description: Lambda to CRUD numbers
       Runtime: ruby2.5
-      Timeout: 10
+      Timeout: 5
       Handler: app.lambda_handler
       Policies:
       - AmazonDynamoDBFullAccess
       - AWSLambdaFullAccess
-      CodeUri: metrics/get_all
+      CodeUri: lambdas/get_all
       Layers:
         - arn:aws:lambda:us-west-2:402153944964:layer:metrics-bundle-layer:1
       Events:
         GetMetrics:
           Type: Api
           Properties:
-            Path: /metrics
+            Path: /numbers
             Method: GET
         ScheduledGetMetrics:
           Type: Schedule
@@ -46,21 +83,22 @@ Resources:
   SendEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Lambda to send metrics email
+      Description: Lambda to send numbers email
       Runtime: ruby2.5
       Timeout: 10
       Handler: app.lambda_handler
       Policies:
       - AmazonDynamoDBFullAccess
       - AmazonSESFullAccess
-      CodeUri: metrics/send_email
+      - AmazonCognitoPowerUser
+      CodeUri: lambdas/send_email
       # Layers:
       #   - arn:aws:lambda:us-west-2:402153944964:layer:metrics-bundle-layer:1
       Events:
         GetMetrics:
           Type: Api
           Properties:
-            Path: /email
+            Path: /send
             Method: GET
 
   # EmailSqsQueue:
@@ -72,7 +110,7 @@ Resources:
     #   Type: AWS::Lambda::LayerVersion
     #   Properties:
     #     LayerName: metrics-bundle-layer
-    #     Description: Bundled gems for metrics mailer
+    #     Description: Bundled gems for daily numbers
     #     ContentUri: dependencies/
     #     CompatibleRuntimes:
     #       - ruby2.5
@@ -85,7 +123,7 @@ Outputs:
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   MetricsApi:
     Description: "API Gateway endpoint URL for Prod stage for GetMetricsFunction"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/metrics"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/numbers"
   # HelloWorldFunction:
   #   Description: "Hello World Lambda Function ARN"
   #   Value: !GetAtt HelloWorldFunction.Arn
