@@ -24,11 +24,12 @@ It's implemented as a scheduled AWS Lambda, in Ruby, which scrapes the data and 
 #### sam commands:
 
 Build the Lambda and associated assets. Use --use-container if there are platform-specific build steps, like compiling native code a la nokogiri. Though if you have dependencies that take a long time to compile, you'll save a lot of time by putting them in a layer.
+
 `sam build --use-container`
 
 Invoke a Lambda locally:
 
-`sam local invoke GetAllMetricsFunction`
+`sam local invoke GetMetricsFunction`
 
 Guided deployment:
 
@@ -40,7 +41,7 @@ Subsequent deploy using saved values (re-run with --guided if you need to update
 
 #### Create a layer for gems
 
-Deployment is interminable if Nokogiri has to be built every time. Put that (and the rest of the gems) in a Lambda layer and it's muuch faster.
+Deployment is interminable if Nokogiri has to be built every time. Put that (and the rest of the gems) in a Lambda layer and it's muuuch faster.
 
 Building the layer, in layer directory:
 
@@ -62,7 +63,7 @@ possilby useful repo showing how to connect to dynamodb local running in a conta
 https://github.com/aws-samples/aws-sam-java-rest/blob/master/src/test/resources/test_environment_mac.json
 
 
-##### gotchas
+##### Gotchas
 
 - Change the Lambda timeout, the default 3s is too too low if external APIs are being hit.
 
@@ -75,7 +76,7 @@ https://github.com/aws-samples/aws-sam-java-rest/blob/master/src/test/resources/
 
 `aws dynamodb list-tables --endpoint-url http://docker.for.mac.localhost:8000/`
 
-`aws dynamodb create-table --cli-input-json file://create-metrics-snapshots-table.json --endpoint-url http://localhost:8000`
+`aws dynamodb create-table --cli-input-json file://json/create-metrics-snapshots-table.json --endpoint-url http://localhost:8000`
 
 `aws dynamodb describe-table --table-name MetricsSnapshotsTable --endpoint-url http://localhost:8000`
 
@@ -85,6 +86,9 @@ https://github.com/aws-samples/aws-sam-java-rest/blob/master/src/test/resources/
 
 `aws dynamodb delete-table --table-name MetricsSnapshotsTable --endpoint-url http://localhost:8000`
 
+`aws cognito-idp list-users --user-pool-id us-west-2_mplqz04Vd`
+https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/CognitoIdentityProvider/Client.html
+
 
 ### Issues with docs:
 
@@ -92,3 +96,6 @@ https://github.com/aws-samples/aws-sam-java-rest/blob/master/src/test/resources/
 https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/DynamoDB/Client.html#put_item-instance_method
 
 - Building Layers for Ruby gems isn't really documented at all. Info in [this blog post](https://medium.com/@joshua.a.kahn/exploring-aws-lambda-layers-and-ruby-support-5510f81b4d14) should be added to AWS docs:
+
+- Could not find list of AWS Managed Policies, have been having to rely on this gist:
+https://gist.github.com/bernadinm/6f68bfdd015b3f3e0a17b2f00c9ea3f8
