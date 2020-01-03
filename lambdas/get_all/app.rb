@@ -99,12 +99,12 @@ def lambda_handler(event:, context:)
     lambda_client_params[:endpoint] = 'http://host.docker.internal:3001' unless prod
     client = Aws::Lambda::Client.new(lambda_client_params)
 
-    payload_hash = {:item_ids => item_id_array.join(",")} # this should pass an array of hashes of metric id's and types
+    payload_hash = {:item_ids => item_id_array.join(",")}
     payload = JSON.generate( payload_hash )
-
     invoke_params = {
       invocation_type: 'Event',
-      log_type: 'None', payload: payload
+      log_type: 'None',
+      payload: payload
     }
     invoke_params[:function_name] = prod ? 'dailyn-SendEmailFunction-4T3P4J9XB670' : 'http://host.docker.internal:3001'
     # invocation_type: "Event - Invoke the function asynchronously. Send events that fail multiple times to the function's dead-letter queue (if it's configured). The API response only includes a status code."
